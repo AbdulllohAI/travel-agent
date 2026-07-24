@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        # tests/ mocks all HTTP via `responses` and never touches
+        # Ollama/Streamlit, so streamlit/pandas/dateparser/httpx/
+        # langchain-community from requirements.txt aren't needed to run
+        # this suite. Verified locally in a from-scratch venv with exactly
+        # this set installed: all 53 tests pass.
+        run: pip install pytest pytest-mock responses requests python-dotenv pydantic langchain-ollama langgraph
+
+      - name: Run tests
+        run: pytest tests/ -v
