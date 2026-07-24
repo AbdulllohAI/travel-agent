@@ -1,0 +1,31 @@
+# LLM + Agent orchestration
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-ollama>=0.2.0
+langgraph>=0.2.0
+ollama>=0.4.0
+
+# Pydantic for structured state/tool schemas
+pydantic>=2.7.0
+
+# HTTP / API clients
+requests>=2.32.0
+httpx>=0.27.0
+
+# UI
+streamlit>=1.38.0
+
+# Env management
+python-dotenv>=1.0.1
+
+# Data handling
+pandas>=2.2.0
+
+# Testing
+pytest>=8.3.0
+pytest-mock>=3.14.0
+responses>=0.25.0
+
+# Optional: nice date parsing for natural language dates
+python-dateutil>=2.9.0
+dateparser>=1.2.0
