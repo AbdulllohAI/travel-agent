@@ -30,6 +30,16 @@ phrase the answer*; every airline, price, time, and airport code comes from a li
 
 **[Try it live →](#)** *(deploy link goes here once deployed — see Deploy section below)*
 
+### Screenshot: proof it's a real tool call, not a hallucinated answer
+
+<div align="center">
+<img src="assets/tool-log-screenshot.png" alt="Tool Logs tab showing the real flight_search_tool parameters and raw Travelpayouts API response" width="720"/>
+</div>
+
+The **Tool Logs** tab shows the exact parameters the LLM passed to
+`flight_search_tool` and the raw JSON the Travelpayouts API returned —
+the same data the chat answer above was built from.
+
 ## Project Overview
 
 The agent understands natural-language requests (including Uzbek) like:
