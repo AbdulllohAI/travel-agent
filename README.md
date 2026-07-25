@@ -1,23 +1,34 @@
+<div align="center">
+
+<img src="assets/hero-banner.svg" alt="AI Travel Agent" width="100%"/>
+
 # ✈️ AI Travel Agent
+
+**Ask for a flight in plain language. Get real fares — never a guessed price.**
 
 A flight search and comparison assistant powered by a **local LLM with real tool calling** —
 not a chatbot that makes up flight data. The LLM only decides *which tool to call* and *how to
 phrase the answer*; every airline, price, time, and airport code comes from a live API call.
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/Agent-LangGraph-1C3C3C)](https://langchain-ai.github.io/langgraph/)
-[![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B)](https://streamlit.io/)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Tests](https://img.shields.io/badge/tests-53%20passing-brightgreen)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+</div>
+
+---
+
 ## 🎬 Demo
 
-**[Try it live →](#)** *(deploy link goes here — see Deploy section below)*
+<div align="center">
+<img src="assets/demo.gif" alt="AI Travel Agent live demo — searching and comparing real flights" width="720"/>
+</div>
 
-<!-- Record a ~20s clip: ask "flights from Tashkent to Istanbul next month",
-show the agent call the real tool, then ask "cheapest one" and show it
-re-rank the already-cached results without a second API call. Drop it here
-as ./assets/demo.gif and replace this comment with: ![demo](./assets/demo.gif) -->
+*Real conversation, recorded against the actual running app — not a mockup.*
+
+**[Try it live →](#)** *(deploy link goes here once deployed — see Deploy section below)*
 
 ## Project Overview
 
@@ -213,11 +224,6 @@ pytest
 All tool logic and agent-node caching/filtering logic is covered with mocked HTTP responses
 (via `responses`) — no live API keys or a running Ollama instance are needed to run the test
 suite.
-
-## Screenshots
-
-*(Add screenshots of the Chat, Flight Results, Flight Comparison, and Tool Logs tabs here once
-you have your Travelpayouts token configured and have run a live search.)*
 
 ## ☁️ Deploy your own (Streamlit Community Cloud, free)
 

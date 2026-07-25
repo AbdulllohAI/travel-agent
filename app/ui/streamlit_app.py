@@ -84,6 +84,30 @@ def _run_turn(user_text: str) -> None:
     st.session_state["chat_history"].append({"role": "assistant", "content": reply})
 
 
+def _render_key_gate() -> None:
+    """The only thing rendered when this deployment is locked to Gemini
+    (LLM_PROVIDER=gemini secret) and no key has been entered yet -- see
+    ai-teaching-assistant's app.py for why this pattern exists: a public
+    demo link should open on one bar, not a sidebar full of search forms
+    and settings competing with it."""
+    _, center, _ = st.columns([1, 2, 1])
+    with center:
+        st.title("✈️ AI Travel Agent")
+        st.markdown("#### 🔑 Enter your Gemini API key to start")
+        st.text_input(
+            "Gemini API key",
+            type="password",
+            placeholder="Paste your Gemini API key here",
+            key="gemini_api_key",
+            label_visibility="collapsed",
+        )
+        st.caption(
+            "Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) "
+            "— used only for your own requests this session, never logged, stored, or shared "
+            "with other visitors."
+        )
+
+
 def _render_sidebar() -> None:
     with st.sidebar:
         st.header("🔍 Search Parameters")
@@ -138,39 +162,50 @@ def _render_sidebar() -> None:
         st.divider()
         st.header("⚙️ Settings")
 
-        provider_labels = {"Local (Ollama)": "ollama", "Gemini (cloud)": "gemini"}
-        default_label = next(
-            (label for label, value in provider_labels.items()
-             if value == st.session_state["llm_provider"]),
-            "Local (Ollama)",
-        )
-        chosen_label = st.selectbox(
-            "LLM Provider", list(provider_labels.keys()),
-            index=list(provider_labels.keys()).index(default_label),
-        )
-        st.session_state["llm_provider"] = provider_labels[chosen_label]
-
-        if st.session_state["llm_provider"] == "gemini":
+        if config.LLM_PROVIDER == "gemini":
+            # Locked-to-Gemini deployment: main()'s key gate already blocked
+            # entry until a key existed -- no Ollama option since it
+            # couldn't work in this environment anyway, just let them
+            # see/update the key.
+            st.session_state["llm_provider"] = "gemini"
             st.text_input(
-                "Gemini API key",
-                type="password",
-                placeholder="Paste your Gemini API key",
-                key="gemini_api_key",
-                help="Get a free key at aistudio.google.com/apikey. Used only "
-                     "for your own requests this session -- never logged, "
-                     "displayed, or shared with other visitors.",
+                "Gemini API key", type="password", key="gemini_api_key",
+                help="Get a free key at aistudio.google.com/apikey.",
             )
-            st.caption(
-                "🔑 [Get a free Gemini API key](https://aistudio.google.com/apikey) "
-                "— no key is stored server-side beyond this session."
-            )
-            if not st.session_state.get("gemini_api_key"):
-                st.info("Paste a Gemini API key above to chat.")
         else:
-            available_models = _list_ollama_models()
-            current_model = config.OLLAMA_MODEL if config.OLLAMA_MODEL in available_models else available_models[0]
-            selected_model = st.selectbox("Ollama model", available_models, index=available_models.index(current_model))
-            config.OLLAMA_MODEL = selected_model
+            provider_labels = {"Local (Ollama)": "ollama", "Gemini (cloud)": "gemini"}
+            default_label = next(
+                (label for label, value in provider_labels.items()
+                 if value == st.session_state["llm_provider"]),
+                "Local (Ollama)",
+            )
+            chosen_label = st.selectbox(
+                "LLM Provider", list(provider_labels.keys()),
+                index=list(provider_labels.keys()).index(default_label),
+            )
+            st.session_state["llm_provider"] = provider_labels[chosen_label]
+
+            if st.session_state["llm_provider"] == "gemini":
+                st.text_input(
+                    "Gemini API key",
+                    type="password",
+                    placeholder="Paste your Gemini API key",
+                    key="gemini_api_key",
+                    help="Get a free key at aistudio.google.com/apikey. Used only "
+                         "for your own requests this session -- never logged, "
+                         "displayed, or shared with other visitors.",
+                )
+                st.caption(
+                    "🔑 [Get a free Gemini API key](https://aistudio.google.com/apikey) "
+                    "— no key is stored server-side beyond this session."
+                )
+                if not st.session_state.get("gemini_api_key"):
+                    st.info("Paste a Gemini API key above to chat.")
+            else:
+                available_models = _list_ollama_models()
+                current_model = config.OLLAMA_MODEL if config.OLLAMA_MODEL in available_models else available_models[0]
+                selected_model = st.selectbox("Ollama model", available_models, index=available_models.index(current_model))
+                config.OLLAMA_MODEL = selected_model
 
         st.session_state["target_currency"] = st.text_input(
             "Target currency for conversions", value=st.session_state["target_currency"]
@@ -270,6 +305,11 @@ def _render_tool_logs_tab() -> None:
 
 def main() -> None:
     _init_session_state()
+
+    if config.LLM_PROVIDER == "gemini" and not st.session_state.get("gemini_api_key"):
+        _render_key_gate()
+        return
+
     st.title("✈️ AI Travel Agent")
     st.caption("Local LLM + real tool calling — flight data always comes from a live Travelpayouts API call.")
 
