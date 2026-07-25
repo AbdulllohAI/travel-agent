@@ -30,10 +30,21 @@ def _init_session_state() -> None:
     st.session_state.setdefault("thread_id", new_thread_id())
     st.session_state.setdefault("chat_history", [])
     st.session_state.setdefault("target_currency", config.DEFAULT_CURRENCY)
+    st.session_state.setdefault("llm_provider", config.LLM_PROVIDER)
 
 
 def _thread_config() -> dict:
-    return {"configurable": {"thread_id": st.session_state["thread_id"]}}
+    # llm_provider/api_key ride along per-session here (not global config
+    # mutation, unlike OLLAMA_MODEL below) so agent_node's LangGraph
+    # RunnableConfig picks them up per-invocation -- see nodes.py's
+    # _build_llm docstring for why a public deployment needs that.
+    return {
+        "configurable": {
+            "thread_id": st.session_state["thread_id"],
+            "llm_provider": st.session_state["llm_provider"],
+            "api_key": st.session_state.get("gemini_api_key"),
+        }
+    }
 
 
 def _current_state() -> dict:
@@ -60,11 +71,15 @@ def _run_turn(user_text: str) -> None:
         result = graph.invoke({"messages": [HumanMessage(content=user_text)]}, config=_thread_config())
         final = result["messages"][-1]
         reply = final.content if isinstance(final, AIMessage) else str(final.content)
-    except Exception as exc:  # Ollama down, model missing, etc. — surface clearly, don't crash the app
+    except Exception as exc:  # Ollama down, missing/invalid Gemini key, model missing, etc. — surface, don't crash
+        hint = (
+            "Check that Ollama is running (`ollama serve`) and the selected model is pulled."
+            if st.session_state["llm_provider"] == "ollama"
+            else "Check that the Gemini API key pasted in the sidebar is valid."
+        )
         reply = (
             "⚠️ The agent hit an unexpected error and couldn't finish this request.\n\n"
-            f"`{type(exc).__name__}: {exc}`\n\n"
-            "Check that Ollama is running (`ollama serve`) and the selected model is pulled."
+            f"`{type(exc).__name__}: {exc}`\n\n{hint}"
         )
     st.session_state["chat_history"].append({"role": "assistant", "content": reply})
 
@@ -123,10 +138,39 @@ def _render_sidebar() -> None:
         st.divider()
         st.header("⚙️ Settings")
 
-        available_models = _list_ollama_models()
-        current_model = config.OLLAMA_MODEL if config.OLLAMA_MODEL in available_models else available_models[0]
-        selected_model = st.selectbox("Ollama model", available_models, index=available_models.index(current_model))
-        config.OLLAMA_MODEL = selected_model
+        provider_labels = {"Local (Ollama)": "ollama", "Gemini (cloud)": "gemini"}
+        default_label = next(
+            (label for label, value in provider_labels.items()
+             if value == st.session_state["llm_provider"]),
+            "Local (Ollama)",
+        )
+        chosen_label = st.selectbox(
+            "LLM Provider", list(provider_labels.keys()),
+            index=list(provider_labels.keys()).index(default_label),
+        )
+        st.session_state["llm_provider"] = provider_labels[chosen_label]
+
+        if st.session_state["llm_provider"] == "gemini":
+            st.text_input(
+                "Gemini API key",
+                type="password",
+                placeholder="Paste your Gemini API key",
+                key="gemini_api_key",
+                help="Get a free key at aistudio.google.com/apikey. Used only "
+                     "for your own requests this session -- never logged, "
+                     "displayed, or shared with other visitors.",
+            )
+            st.caption(
+                "🔑 [Get a free Gemini API key](https://aistudio.google.com/apikey) "
+                "— no key is stored server-side beyond this session."
+            )
+            if not st.session_state.get("gemini_api_key"):
+                st.info("Paste a Gemini API key above to chat.")
+        else:
+            available_models = _list_ollama_models()
+            current_model = config.OLLAMA_MODEL if config.OLLAMA_MODEL in available_models else available_models[0]
+            selected_model = st.selectbox("Ollama model", available_models, index=available_models.index(current_model))
+            config.OLLAMA_MODEL = selected_model
 
         st.session_state["target_currency"] = st.text_input(
             "Target currency for conversions", value=st.session_state["target_currency"]
@@ -139,13 +183,17 @@ def _render_sidebar() -> None:
             + " Travelpayouts token "
             + ("set" if travelpayouts_ok else "missing")
         )
-        try:
-            import requests
+        if st.session_state["llm_provider"] == "gemini":
+            gemini_ok = bool(st.session_state.get("gemini_api_key"))
+            st.write(("🟢" if gemini_ok else "🔴") + " Gemini key " + ("set" if gemini_ok else "missing"))
+        else:
+            try:
+                import requests
 
-            requests.get(f"{config.OLLAMA_BASE_URL}/api/tags", timeout=2)
-            st.write("🟢 Ollama reachable")
-        except Exception:
-            st.write("🔴 Ollama unreachable")
+                requests.get(f"{config.OLLAMA_BASE_URL}/api/tags", timeout=2)
+                st.write("🟢 Ollama reachable")
+            except Exception:
+                st.write("🔴 Ollama unreachable")
 
 
 def _render_chat_tab() -> None:

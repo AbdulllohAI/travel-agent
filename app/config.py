@@ -16,6 +16,20 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
 OLLAMA_FALLBACK_MODELS = ["qwen2.5:3b-instruct", "llama3.2:3b"]
 OLLAMA_TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0.1"))
 
+# ── Gemini (cloud, optional) ─────────────────────────
+# For a public deployment with no Ollama server available: visitors bring
+# their own key via the sidebar (see ui/streamlit_app.py) rather than one
+# being baked into this config. GEMINI_API_KEY here is only a local/.env
+# fallback for running the "gemini" provider without the UI's key prompt.
+# Uses Gemini's OpenAI-compatible endpoint (via langchain-openai's
+# ChatOpenAI) so tool-calling works through the same .bind_tools() call
+# agent_node already uses for Ollama -- no extra provider-specific
+# LangChain package needed.
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 # ── Travelpayouts / Aviasales Flight Data API ───────
 # Free signup at https://www.travelpayouts.com, token appears immediately in your profile
 # under "API token" — no approval process, unlike Amadeus/Kiwi.

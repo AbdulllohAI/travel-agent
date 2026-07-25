@@ -13,6 +13,7 @@ from datetime import date
 from typing import Literal
 
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_ollama import ChatOllama
 from pydantic import ValidationError
 
@@ -135,9 +136,35 @@ def _cache_summary(state: AgentState) -> str:
     return "\n".join(lines)
 
 
-def _build_llm():
+def _build_llm(provider: str = None, api_key: str = None):
     """Reads app.config at call time (not import time) so a UI model selector can override
-    config.OLLAMA_MODEL between requests without needing to reload this module."""
+    config.OLLAMA_MODEL between requests without needing to reload this module.
+
+    provider/api_key: per-invocation overrides threaded in via agent_node's
+    LangGraph RunnableConfig (configurable.llm_provider/api_key), NOT global
+    config mutation -- a public deployment has many concurrent visitors
+    sharing this process, and unlike OLLAMA_MODEL (a preference, not a
+    secret), an API key written to global config would leak across
+    sessions the same way st.cache_resource did in ai-data-analysis-agent
+    before that was fixed. See ui/streamlit_app.py's _thread_config().
+    """
+    provider = provider or config.LLM_PROVIDER
+    if provider == "gemini":
+        from langchain_openai import ChatOpenAI
+
+        key = api_key or config.GEMINI_API_KEY
+        if not key:
+            raise ValueError(
+                "No Gemini API key provided. Paste one in the sidebar, or "
+                "set GEMINI_API_KEY in your .env for local use."
+            )
+        return ChatOpenAI(
+            model=config.GEMINI_MODEL,
+            base_url=config.GEMINI_BASE_URL,
+            api_key=key,
+            temperature=config.OLLAMA_TEMPERATURE,
+        ).bind_tools(TOOLS)
+
     return ChatOllama(
         model=config.OLLAMA_MODEL,
         base_url=config.OLLAMA_BASE_URL,
@@ -145,9 +172,23 @@ def _build_llm():
     ).bind_tools(TOOLS)
 
 
-def agent_node(state: AgentState) -> dict:
-    """Intent parsing (first pass) AND response formatting (on loop-back after tool results)."""
-    llm = _build_llm()
+def agent_node(state: AgentState, config: RunnableConfig = None) -> dict:
+    """Intent parsing (first pass) AND response formatting (on loop-back after tool results).
+
+    config: LangGraph injects this automatically on graph.invoke() -- but
+    only when the second parameter is named exactly `config` (confirmed by
+    testing; a differently-named second parameter is silently left as
+    None, LangGraph does not appear to inject by type annotation alone).
+    Reads configurable.llm_provider/api_key set by the Streamlit UI per
+    session. Defaults to None (falls back to the app.config module's
+    LLM_PROVIDER/GEMINI_API_KEY) so direct calls/tests that don't pass one
+    keep working unchanged. This parameter is named `config`, same as the
+    `from app import config` module import below -- that only shadows the
+    module inside THIS function's own scope; _build_llm is a separate
+    function and still resolves the module import correctly.
+    """
+    configurable = (config or {}).get("configurable", {})
+    llm = _build_llm(provider=configurable.get("llm_provider"), api_key=configurable.get("api_key"))
     system = SystemMessage(
         content=_SYSTEM_PROMPT_TEMPLATE.format(today=date.today().isoformat(), cache_summary=_cache_summary(state))
     )

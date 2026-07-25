@@ -4,6 +4,9 @@ langchain-community>=0.3.0
 langchain-ollama>=0.2.0
 langgraph>=0.2.0
 ollama>=0.4.0
+# Gemini (cloud, optional) via its OpenAI-compatible endpoint -- reuses
+# ChatOpenAI instead of adding a Gemini-specific LangChain package.
+langchain-openai>=0.2.0
 
 # Pydantic for structured state/tool schemas
 pydantic>=2.7.0
