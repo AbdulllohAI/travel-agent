@@ -224,10 +224,18 @@ you have your Travelpayouts token configured and have run a live search.)*
 1. Push this repo to GitHub.
 2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with GitHub, click **New app**.
 3. Point it at this repo, branch `main`, main file path `app/ui/streamlit_app.py`.
-4. Set `TRAVELPAYOUTS_API_TOKEN` as a secret in the app's settings (free signup, see API Usage
-   above — this one's yours to configure since flight data needs it regardless of LLM provider).
-5. Deploy. Visitors pick **"Gemini (cloud)"** in the sidebar and paste their own free API key —
-   no LLM secret to configure on your end.
+4. In **Advanced settings → Secrets**, add:
+   ```
+   LLM_PROVIDER = "gemini"
+   TRAVELPAYOUTS_API_TOKEN = "your_token_here"
+   ```
+   `LLM_PROVIDER` makes Gemini the default a visitor sees immediately (no
+   Ollama server exists on Streamlit Cloud, so without this they'd hit an
+   "Ollama unreachable" error before finding the provider dropdown).
+   `TRAVELPAYOUTS_API_TOKEN` is yours to configure since flight data needs
+   it regardless of LLM provider (free signup, see API Usage above).
+5. Deploy. Visitors immediately see the Gemini API key field and paste
+   their own free key — no LLM secret to configure on your end.
 
 ## Future Improvements
 
